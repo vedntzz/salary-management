@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 
 from app.services.currency import CURRENCY_BY_COUNTRY
 
@@ -50,6 +50,14 @@ class EmployeeUpdate(BaseModel):
     country: Country | None = None
     salary_amount: int | None = Field(default=None, gt=0)
     hire_date: date | None = None
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def reject_explicit_null(cls, value: object) -> object:
+        # Omitting a field leaves it unchanged; null would blank a required column.
+        if value is None:
+            raise ValueError("must not be null")
+        return value
 
 
 class EmployeeRead(EmployeeFields):
