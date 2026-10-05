@@ -164,3 +164,34 @@ def test_delete_employee_returns_404_when_missing(api_client: TestClient) -> Non
     # Assert
     assert response.status_code == 404
     assert response.json() == {"detail": "Employee not found"}
+
+
+def test_post_employee_returns_409_when_email_differs_only_by_case(
+    api_client: TestClient,
+) -> None:
+    # Arrange
+    create_employee(api_client, email="asha.rao@acme.com")
+
+    # Act
+    response = api_client.post(
+        "/api/employees", json=build_employee_payload(email="Asha.Rao@acme.com")
+    )
+
+    # Assert
+    assert response.status_code == 409
+
+
+def test_patch_employee_returns_409_when_email_differs_only_by_case_from_another(
+    api_client: TestClient,
+) -> None:
+    # Arrange
+    create_employee(api_client, email="asha.rao@acme.com")
+    other = create_employee(api_client, email="liam.smith@acme.com")
+
+    # Act
+    response = api_client.patch(
+        f"/api/employees/{other['id']}", json={"email": "Asha.Rao@acme.com"}
+    )
+
+    # Assert
+    assert response.status_code == 409
