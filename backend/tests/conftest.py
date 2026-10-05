@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from app.db import Base
 from app.main import app
 
 
@@ -16,8 +17,6 @@ def client() -> TestClient:
 
 @pytest.fixture
 def session() -> Iterator[Session]:
-    # Imported here so a missing app.db fails only the tests that need a session.
-    from app.db import Base
     from app.models import employee  # noqa: F401  registers the table on Base.metadata
 
     # StaticPool keeps one connection, so the in-memory database survives across the test.
