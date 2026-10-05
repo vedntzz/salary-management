@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.db import Base
+from app.db import Base, get_session
 from app.main import app
 
 
@@ -27,3 +27,11 @@ def session() -> Iterator[Session]:
     with Session(engine) as db_session:
         yield db_session
     engine.dispose()
+
+
+@pytest.fixture
+def api_client(session: Session) -> Iterator[TestClient]:
+    # Routes share the test's in-memory session, so tests can arrange data through the API.
+    app.dependency_overrides[get_session] = lambda: session
+    yield TestClient(app)
+    app.dependency_overrides.clear()
