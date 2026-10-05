@@ -1,8 +1,10 @@
+from datetime import date
 from typing import Any
 
 import pytest
-from app.schemas.employee import EmployeeCreate
 from pydantic import ValidationError
+
+from app.schemas.employee import EmployeeCreate
 
 
 def build_employee_payload(**overrides: Any) -> dict[str, Any]:
@@ -14,6 +16,7 @@ def build_employee_payload(**overrides: Any) -> dict[str, Any]:
         "department": "Engineering",
         "country": "India",
         "salary_amount": 2_400_000,
+        "hire_date": date(2021, 4, 1),
     }
     return payload | overrides
 
@@ -147,6 +150,16 @@ def test_employee_create_derives_salary_currency_from_country(
 def test_employee_create_rejects_salary_currency_when_given_as_input() -> None:
     # Arrange
     payload = build_employee_payload(country="India", salary_currency="USD")
+
+    # Act / Assert
+    with pytest.raises(ValidationError):
+        EmployeeCreate(**payload)
+
+
+def test_employee_create_rejects_payload_when_hire_date_missing() -> None:
+    # Arrange
+    payload = build_employee_payload()
+    del payload["hire_date"]
 
     # Act / Assert
     with pytest.raises(ValidationError):
