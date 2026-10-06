@@ -97,6 +97,19 @@ Indexes cover `country`, `department`, `job_title`, and `email`. Page size is ca
 - **AI-assisted, human-steered.** Claude Code wrote the code under the rules in [`CLAUDE.md`](CLAUDE.md), stopping at every red and green step. I reviewed each step and made every commit myself. What I accepted, overruled, or caught is in [`docs/AI_LOG.md`](docs/AI_LOG.md).
 - **Every agent session recorded** with [The Session](https://www.npmjs.com/package/@vedantzz/session), a CLI I built and published. Each receipt compares the files I declared up front with what the agent actually changed. Receipts are in [`docs/sessions/`](docs/sessions/).
 
+| Branch | Turns | API calls | Tokens |
+| --- | --- | --- | --- |
+| Setup | 1 | 32 | 2.06M |
+| Employees API | 17 | 65 | 8.78M |
+| Pay insights | 9 | 38 | 3.07M |
+| UI: employees | 21 | 121 | 20.71M |
+| UI: insights | 2 | 23 | 2.02M |
+| Seed outliers | 4 | 19 | 1.10M |
+| Deploy | 5 | 15 | 0.82M |
+| **Total** | **59** | **313** | **38.56M** |
+
+Token counts are pooled as The Session prints them, and they're mostly cache reads, not fresh input. The UI employees branch alone used over half, because of its many small red/green and fix cycles. Scope drift was only recorded reliably on the employees API branch, and the AI log explains why.
+
 ## Project docs
 | File | What's in it |
 | --- | --- |
