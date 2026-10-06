@@ -49,6 +49,7 @@ class EmployeeService:
             countries=self.repository.find_distinct_values("country"),
             departments=self.repository.find_distinct_values("department"),
             job_titles=self.repository.find_distinct_values("job_title"),
+            currency_by_country=dict(CURRENCY_BY_COUNTRY),
         )
 
     def create_employee(self, payload: EmployeeCreate) -> Employee:
