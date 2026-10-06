@@ -20,6 +20,8 @@ type EmployeeRow = Row<typeof features, Employee>
 const SORT_KEY_BY_COLUMN: Record<string, SortKey> = { name: 'name', salary: 'salary' }
 const NUMERIC_COLUMNS = new Set(['salary'])
 const EMPTY_ROWS: Employee[] = []
+// Key rows by employee, not position, so a re-sorted list keeps each row's DOM node (and its focus).
+const getRowId = (employee: Employee) => String(employee.id)
 
 const columns = helper.columns([
   helper.accessor('employee_code', { header: 'Code' }),
@@ -116,7 +118,7 @@ interface EmployeeTableProps extends SortProps {
 }
 
 export function EmployeeTable({ employees, isLoading, isRefreshing, onRowOpen, ...sortProps }: EmployeeTableProps) {
-  const table = useTable({ features, columns, data: employees ?? EMPTY_ROWS })
+  const table = useTable({ features, columns, data: employees ?? EMPTY_ROWS, getRowId })
   const rows = table.getRowModel().rows
   return (
     <div className="overflow-x-auto border bg-card">
