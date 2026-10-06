@@ -8,6 +8,16 @@ function jsonResponse(status: number, body: unknown): Response {
   })
 }
 
+async function captureApiError(request: Promise<unknown>): Promise<ApiError> {
+  try {
+    await request
+  } catch (error) {
+    if (error instanceof ApiError) return error
+    throw error
+  }
+  throw new Error('Expected the request to reject with an ApiError')
+}
+
 describe('buildQueryString', () => {
   it('test_build_query_string_joins_params_with_leading_question_mark', () => {
     // Arrange / Act
@@ -119,7 +129,7 @@ describe('apiRequest', () => {
     fetchMock.mockResolvedValue(jsonResponse(409, { detail: 'Email already exists' }))
 
     // Act
-    const error = await apiRequest('/api/employees', { method: 'POST', body: {} }).catch((e) => e)
+    const error = await captureApiError(apiRequest('/api/employees', { method: 'POST', body: {} }))
 
     // Assert
     expect(error).toBeInstanceOf(ApiError)
@@ -133,7 +143,7 @@ describe('apiRequest', () => {
     fetchMock.mockResolvedValue(jsonResponse(422, { detail }))
 
     // Act
-    const error = await apiRequest('/api/employees', { method: 'POST', body: {} }).catch((e) => e)
+    const error = await captureApiError(apiRequest('/api/employees', { method: 'POST', body: {} }))
 
     // Assert
     expect(error).toBeInstanceOf(ApiError)
@@ -150,7 +160,7 @@ describe('apiRequest', () => {
     fetchMock.mockResolvedValue(jsonResponse(422, { detail }))
 
     // Act
-    const error = await apiRequest('/api/employees', { method: 'POST', body: {} }).catch((e) => e)
+    const error = await captureApiError(apiRequest('/api/employees', { method: 'POST', body: {} }))
 
     // Assert
     expect(error.fieldErrors).toEqual({
@@ -164,7 +174,7 @@ describe('apiRequest', () => {
     fetchMock.mockResolvedValue(jsonResponse(409, { detail: 'Email already exists' }))
 
     // Act
-    const error = await apiRequest('/api/employees', { method: 'POST', body: {} }).catch((e) => e)
+    const error = await captureApiError(apiRequest('/api/employees', { method: 'POST', body: {} }))
 
     // Assert
     expect(error.fieldErrors).toEqual({})
@@ -177,7 +187,7 @@ describe('apiRequest', () => {
     )
 
     // Act
-    const error = await apiRequest('/api/employees').catch((e) => e)
+    const error = await captureApiError(apiRequest('/api/employees'))
 
     // Assert
     expect(error).toBeInstanceOf(ApiError)
