@@ -71,6 +71,9 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 **Decision:** `seed.py` uses `random.Random(42)`, name lists from files, and salary bands per title × country multiplier. Bulk insert, idempotent (wipes and reseeds).
 **Why:** The same 10k rows every time, so demo numbers and integration tests are reproducible.
 
+**Planted outliers:** After the rows are built, the same RNG picks ~1% of them (1 in 100), alternating direction: above-band salaries land 40–80% over the band max, below-band 40–60% under the band min (always positive). Integer percent math only (D-004).
+**Why:** Uniform in-band data barely reaches D-008's 25% threshold: only the widest bands relative to their midpoint (e.g. Account Executive, 80k–130k, ±24%) graze it when the sample median drifts, at 25–28%. Without planted rows the outlier list would be a handful of borderline cases with no real signal. Alternating guarantees an even above/below split instead of a coin flip.
+
 ## D-010 · No auth, no salary history
 **Decision:** Both confirmed out of scope by Incubyte. See REQUIREMENTS.md.
 **Consequence:** The schema keeps `employees` as a single table. History would be an added `salary_changes` table, not a rewrite.
