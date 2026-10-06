@@ -39,20 +39,23 @@ export function employeePage(overrides: Record<string, unknown> = {}) {
   return { items: EMPLOYEES, total: EMPLOYEES.length, page: 1, page_size: 20, ...overrides }
 }
 
-function jsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
 interface MockApiOptions {
   page?: ReturnType<typeof employeePage>
   employeesPending?: boolean
+  employeesError?: { status: number; detail: string }
 }
 
-export function mockEmployeesApi({ page = employeePage(), employeesPending = false }: MockApiOptions = {}): Mock {
+export function mockEmployeesApi(options: MockApiOptions = {}): Mock {
+  const { page = employeePage(), employeesPending = false, employeesError } = options
   const fetchMock = vi.fn(async (url: string) => {
     if (url.includes('/api/meta/filters')) return jsonResponse(FILTER_OPTIONS)
     // A promise that never settles keeps the table in its loading state.
     if (employeesPending) return new Promise<Response>(() => {})
+    if (employeesError) return jsonResponse({ detail: employeesError.detail }, employeesError.status)
     return jsonResponse(page)
   })
   vi.stubGlobal('fetch', fetchMock)

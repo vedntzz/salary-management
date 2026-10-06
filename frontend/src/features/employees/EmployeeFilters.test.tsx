@@ -102,4 +102,21 @@ describe('Employee filters', () => {
     })
     expect(screen.getByRole('searchbox', { name: 'Search employees' })).toHaveValue('asha')
   })
+
+  it('test_search_box_follows_url_when_pressing_back', async () => {
+    // Arrange
+    mockEmployeesApi()
+    renderEmployeesAt('/employees?search=rao')
+    const searchBox = screen.getByRole('searchbox', { name: 'Search employees' })
+    await userEvent.clear(searchBox)
+    await userEvent.type(searchBox, 'asha')
+    await waitFor(() => expect(currentUrlParams().get('search')).toBe('asha'))
+
+    // Act
+    act(() => window.history.back())
+
+    // Assert
+    await waitFor(() => expect(currentUrlParams().get('search')).toBe('rao'))
+    await waitFor(() => expect(searchBox).toHaveValue('rao'))
+  })
 })
