@@ -18,6 +18,9 @@ EARLIEST_HIRE_DATE = date(2015, 1, 1)
 HIRE_WINDOW_DAYS = (date(2026, 9, 30) - EARLIEST_HIRE_DATE).days
 COUNTRIES = list(CURRENCY_BY_COUNTRY)
 DEPARTMENTS = list(TITLES_BY_DEPARTMENT)
+ROWS_PER_PLANTED_OUTLIER = 100
+ABOVE_BAND_PERCENT_RANGE = (40, 80)
+BELOW_BAND_PERCENT_RANGE = (40, 60)
 
 
 def build_email(first_name: str, last_name: str, number: int) -> str:
@@ -46,11 +49,29 @@ def build_employee(
     }
 
 
+def plant_salary_outlier(rng: random.Random, row: dict[str, Any], above_band: bool) -> None:
+    low, high = salary_band_for(row["job_title"], row["country"])
+    # Integer percent math keeps money off floats (D-004).
+    if above_band:
+        row["salary_amount"] = high + high * rng.randint(*ABOVE_BAND_PERCENT_RANGE) // 100
+    else:
+        row["salary_amount"] = low - low * rng.randint(*BELOW_BAND_PERCENT_RANGE) // 100
+
+
+def plant_salary_outliers(rng: random.Random, rows: list[dict[str, Any]]) -> None:
+    # Uniform in-band pay only grazes D-008's 25% threshold, so planted rows give it real signal.
+    positions = rng.sample(range(len(rows)), k=len(rows) // ROWS_PER_PLANTED_OUTLIER)
+    for order, position in enumerate(positions):
+        plant_salary_outlier(rng, rows[position], above_band=order % 2 == 0)
+
+
 def generate_employees(
     first_names: list[str], last_names: list[str], count: int, seed: int
 ) -> list[dict[str, Any]]:
     rng = random.Random(seed)
-    return [build_employee(rng, number, first_names, last_names) for number in range(1, count + 1)]
+    rows = [build_employee(rng, number, first_names, last_names) for number in range(1, count + 1)]
+    plant_salary_outliers(rng, rows)
+    return rows
 
 
 def seed_employees(session: Session, rows: list[dict[str, Any]]) -> None:
