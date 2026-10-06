@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, configure, getConfig, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -9,7 +9,10 @@ import {
   renderEmployeesAt,
 } from './testing'
 
+const defaultAsyncWrapper = getConfig().asyncWrapper
+
 afterEach(() => {
+  configure({ asyncWrapper: defaultAsyncWrapper })
   vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.unstubAllEnvs()
@@ -52,6 +55,8 @@ describe('Employee filters', () => {
     renderEmployeesAt('/employees')
     await screen.findByRole('row', { name: /EMP-00001/ })
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    // RTL's wrapper drains on a setTimeout it only advances for Jest timers, so it hangs under Vitest's.
+    configure({ asyncWrapper: (callback) => callback() })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
     // Act
