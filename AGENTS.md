@@ -24,6 +24,7 @@ backend/
   tests/unit/  tests/integration/  conftest.py
   scripts/check_limits.py
 frontend/src/
+  app/                  AppLayout, NotFoundPage
   api/client.ts  employees.ts  insights.ts
   features/employees/   EmployeeTable, EmployeeFilters, EmployeeForm, hooks
   features/insights/    SummaryCards, PayByDimension, SalaryHistogram, OutlierList
