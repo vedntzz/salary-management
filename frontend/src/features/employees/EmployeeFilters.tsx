@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import type { EmployeeListParams, FilterOptions } from '@/api/employees'
-import { useDebouncedCallback, useFilterOptions, type EmployeeFilterKey } from './hooks'
+import { useDebouncedCallback, useFilterOptions, useTextFollowingUrl, type EmployeeFilterKey } from './hooks'
 
 const SEARCH_DEBOUNCE_MS = 300
 
@@ -13,9 +12,9 @@ const FILTERS: { key: EmployeeFilterKey; label: string; optionsKey: keyof Filter
   { key: 'job_title', label: 'Title', optionsKey: 'job_titles' },
 ]
 
-function SearchInput({ initialValue, onSearch }: { initialValue: string; onSearch: (search: string) => void }) {
+function SearchInput({ urlSearch, onSearch }: { urlSearch: string; onSearch: (search: string) => void }) {
   // Local state keeps typing instant; only the debounced value reaches the URL and the API.
-  const [text, setText] = useState(initialValue)
+  const [text, setText] = useTextFollowingUrl(urlSearch)
   const sendSearch = useDebouncedCallback(onSearch, SEARCH_DEBOUNCE_MS)
   return (
     <input
@@ -68,7 +67,7 @@ export function EmployeeFilters({ params, onSearchChange, onFilterChange }: Empl
   const { data: options } = useFilterOptions()
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <SearchInput initialValue={params.search} onSearch={onSearchChange} />
+      <SearchInput urlSearch={params.search} onSearch={onSearchChange} />
       {FILTERS.map((filter) => (
         <FilterSelect
           key={filter.key}

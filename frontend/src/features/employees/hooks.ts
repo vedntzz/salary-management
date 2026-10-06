@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -47,15 +47,15 @@ function applyUrlChanges(current: URLSearchParams, changes: Record<string, strin
 
 export function useEmployeeListParams() {
   const [searchParams, setSearchParams] = useSearchParams()
+  // Every change pushes a history entry so Back steps through what the user looked at.
   const updateUrl = useCallback(
-    (changes: Record<string, string>, replace = false) =>
-      setSearchParams((current) => applyUrlChanges(current, changes), { replace }),
+    (changes: Record<string, string>) => setSearchParams((current) => applyUrlChanges(current, changes)),
     [setSearchParams],
   )
   return {
     params: readEmployeeListParams(searchParams),
     // Any change to what is listed starts again from page 1.
-    setSearch: (search: string) => updateUrl({ search, page: '' }, true),
+    setSearch: (search: string) => updateUrl({ search, page: '' }),
     setFilter: (key: EmployeeFilterKey, value: string) => updateUrl({ [key]: value, page: '' }),
     setSort: (sort: EmployeeSort) => updateUrl({ sort, page: '' }),
     setPage: (page: number) => updateUrl({ page: String(page) }),
@@ -96,4 +96,28 @@ export function useDebouncedCallback<Args extends unknown[]>(
     },
     [delayMs],
   )
+}
+
+export function useDelayedFlag(active: boolean, delayMs: number): boolean {
+  const [elapsed, setElapsed] = useState(false)
+  useEffect(() => {
+    if (!active) return
+    const timer = setTimeout(() => setElapsed(true), delayMs)
+    return () => {
+      clearTimeout(timer)
+      setElapsed(false)
+    }
+  }, [active, delayMs])
+  return active && elapsed
+}
+
+export function useTextFollowingUrl(urlValue: string): [string, (text: string) => void] {
+  const [text, setText] = useState(urlValue)
+  const [syncedValue, setSyncedValue] = useState(urlValue)
+  // When the URL changes underneath the input (Back, Forward), the text follows it.
+  if (urlValue !== syncedValue) {
+    setSyncedValue(urlValue)
+    setText(urlValue)
+  }
+  return [text, setText]
 }

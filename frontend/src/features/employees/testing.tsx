@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react'
 import { vi, type Mock } from 'vitest'
 import App from '@/App'
+import { createTestQueryClient } from '@/test/queryClient'
 
 export const FILTER_OPTIONS = {
   countries: ['Germany', 'India', 'United States'],
@@ -81,5 +82,5 @@ export function currentUrlParams(): URLSearchParams {
 
 export function renderEmployeesAt(path: string) {
   window.history.pushState({}, '', path)
-  return render(<App />)
+  return render(<App queryClient={createTestQueryClient()} />)
 }

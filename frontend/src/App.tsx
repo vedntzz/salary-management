@@ -1,20 +1,16 @@
 import { useState } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/app/AppLayout'
 import { NotFoundPage } from '@/app/NotFoundPage'
+import { createQueryClient } from '@/app/queryClient'
 import { EmployeesPage } from '@/features/employees/EmployeesPage'
 import { InsightsPage } from '@/features/insights/InsightsPage'
 
-function createQueryClient(): QueryClient {
-  // Single HR user on one screen: refetching on every tab focus is noise, not freshness.
-  return new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
-}
-
-function App() {
-  const [queryClient] = useState(createQueryClient)
+function App({ queryClient }: { queryClient?: QueryClient }) {
+  const [client] = useState(() => queryClient ?? createQueryClient())
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={client}>
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>

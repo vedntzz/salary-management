@@ -1,11 +1,12 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { createTestQueryClient } from './test/queryClient'
 
 function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
-  render(<App />)
+  render(<App queryClient={createTestQueryClient()} />)
 }
 
 async function clickSidebarLink(name: string) {
@@ -14,7 +15,11 @@ async function clickSidebarLink(name: string) {
 }
 
 describe('App shell', () => {
-  beforeEach(() => window.history.pushState({}, '', '/'))
+  beforeEach(() => {
+    window.history.pushState({}, '', '/')
+    // Shell tests only check navigation, so page data can stay loading forever.
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+  })
 
   it('test_sidebar_shows_employees_and_insights_links', () => {
     // Arrange / Act

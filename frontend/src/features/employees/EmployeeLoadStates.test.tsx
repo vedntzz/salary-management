@@ -5,8 +5,6 @@ import { mockEmployeesApi, renderEmployeesAt } from './testing'
 
 const SERVER_ERROR = { status: 500, detail: 'Database unavailable' }
 const WAKING_MESSAGE = 'Waking up the server, this can take up to a minute on the free tier.'
-// Allows for one automatic retry before the error is shown.
-const ERROR_TIMEOUT = { timeout: 4000 }
 
 afterEach(() => {
   vi.useRealTimers()
@@ -23,7 +21,7 @@ describe('Employee load states', () => {
     renderEmployeesAt('/employees')
 
     // Assert
-    const alert = await screen.findByRole('alert', undefined, ERROR_TIMEOUT)
+    const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Database unavailable')
   })
 
@@ -35,7 +33,7 @@ describe('Employee load states', () => {
     renderEmployeesAt('/employees')
 
     // Assert
-    await screen.findByRole('alert', undefined, ERROR_TIMEOUT)
+    await screen.findByRole('alert')
     expect(screen.queryByText(/no employees match/i)).not.toBeInTheDocument()
   })
 
@@ -43,7 +41,7 @@ describe('Employee load states', () => {
     // Arrange
     mockEmployeesApi({ employeesError: SERVER_ERROR })
     renderEmployeesAt('/employees')
-    const retry = await screen.findByRole('button', { name: 'Retry' }, ERROR_TIMEOUT)
+    const retry = await screen.findByRole('button', { name: 'Retry' })
     mockEmployeesApi()
 
     // Act
@@ -52,7 +50,7 @@ describe('Employee load states', () => {
     // Assert
     expect(await screen.findByRole('row', { name: /EMP-00001/ })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-  }, 10000)
+  })
 
   it('test_employee_list_shows_wake_up_notice_only_after_3s_of_first_load', async () => {
     // Arrange
