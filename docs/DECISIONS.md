@@ -61,6 +61,12 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 - *Z-score:* salaries are skewed, and HR can't reason about "2.1 standard deviations."
 - *Org-wide percentile:* a US engineer would always look high next to an India analyst.
 
+**Details:**
+- *Strict `>`:* an employee exactly at the threshold is not flagged ("more than 25%"). The deviation and the threshold are both `Decimal`, so 25% can't round to 25.0000001 and flip.
+- *`deviation_percent`* is a signed float to one decimal (`30.0`, `-50.0`). It's a ratio, not money, so D-004 doesn't apply. `direction` (`above|below`) repeats the sign for readability.
+- *Order:* by absolute deviation descending (the exact value, not the rounded one), ties broken by employee id so the list is stable.
+- *Medians are in local currency.* Groups are single-country, so no conversion is needed.
+
 ## D-009 · Deterministic seed
 **Decision:** `seed.py` uses `random.Random(42)`, name lists from files, and salary bands per title × country multiplier. Bulk insert, idempotent (wipes and reseeds).
 **Why:** The same 10k rows every time, so demo numbers and integration tests are reproducible.

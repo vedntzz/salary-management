@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -59,3 +60,26 @@ class SalaryBinRead(BaseModel):
 class SalaryDistribution(BaseModel):
     currency: str
     bins: list[SalaryBinRead]
+
+
+class OutlierQuery(BaseModel):
+    # Decimal parses "0.15" exactly, so the strict > boundary can't drift (D-008).
+    threshold: Decimal = Field(default=Decimal("0.25"), ge=Decimal("0.01"), le=Decimal("1.0"))
+    min_group_size: int = Field(default=5, ge=2)
+
+
+class OutlierItem(BaseModel):
+    id: int
+    employee_code: str
+    name: str
+    job_title: str
+    country: str
+    salary: int
+    currency: str
+    group_median: int
+    deviation_percent: float
+    direction: Literal["above", "below"]
+
+
+class OutlierReport(BaseModel):
+    items: list[OutlierItem]

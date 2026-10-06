@@ -1,5 +1,8 @@
 from collections import defaultdict
+from decimal import ROUND_HALF_UP, Decimal
+from typing import Any
 
+from sqlalchemy import Row
 from sqlalchemy.orm import Session
 
 from app.currency import CURRENCY_BY_COUNTRY, convert_local_to_usd
@@ -9,6 +12,9 @@ from app.schemas.insights import (
     DimensionQuery,
     DistributionQuery,
     GroupPayStats,
+    OutlierItem,
+    OutlierQuery,
+    OutlierReport,
     PayrollSummary,
     SalaryBinRead,
     SalaryDistribution,
@@ -20,6 +26,7 @@ from app.services.statistics import (
 )
 
 REPORTING_CURRENCY = "USD"
+OutlierCandidate = tuple[Decimal, Row[Any], int]
 
 
 def build_group_stats(group: str, currency: str, salaries: list[int]) -> GroupPayStats:
@@ -32,6 +39,36 @@ def build_group_stats(group: str, currency: str, salaries: list[int]) -> GroupPa
         avg=calculate_average_salary(salaries),
         median=calculate_median_salary(salaries),
     )
+
+
+def calculate_deviation(salary: int, median: int) -> Decimal:
+    return Decimal(salary - median) / Decimal(median)
+
+
+def build_outlier_item(candidate: OutlierCandidate) -> OutlierItem:
+    deviation, record, median = candidate
+    percent = (deviation * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    return OutlierItem(
+        id=record.id,
+        employee_code=record.employee_code,
+        name=f"{record.first_name} {record.last_name}",
+        job_title=record.job_title,
+        country=record.country,
+        salary=record.salary_amount,
+        currency=record.salary_currency,
+        group_median=median,
+        deviation_percent=float(percent),
+        direction="above" if deviation > 0 else "below",
+    )
+
+
+def find_group_outliers(members: list[Row[Any]], threshold: Decimal) -> list[OutlierCandidate]:
+    # Groups are single-country, so medians compare in local currency (D-008).
+    median = calculate_median_salary([member.salary_amount for member in members])
+    candidates = [
+        (calculate_deviation(member.salary_amount, median), member, median) for member in members
+    ]
+    return [candidate for candidate in candidates if abs(candidate[0]) > threshold]
 
 
 class InsightsService:
@@ -68,6 +105,20 @@ class InsightsService:
         histogram = build_salary_histogram(salaries, query.bins) if salaries else []
         bins = [SalaryBinRead.model_validate(salary_bin) for salary_bin in histogram]
         return SalaryDistribution(currency=currency, bins=bins)
+
+    def find_outliers(self, query: OutlierQuery) -> OutlierReport:
+        groups: dict[tuple[str, str], list[Row[Any]]] = defaultdict(list)
+        for record in self.repository.list_salary_records():
+            groups[(record.job_title, record.country)].append(record)
+        candidates = [
+            candidate
+            for members in groups.values()
+            if len(members) >= query.min_group_size
+            for candidate in find_group_outliers(members, query.threshold)
+        ]
+        # Exact deviation orders the list; id breaks ties so the order is stable.
+        candidates.sort(key=lambda candidate: (-abs(candidate[0]), candidate[1].id))
+        return OutlierReport(items=[build_outlier_item(candidate) for candidate in candidates])
 
     def list_usd_salaries(self) -> list[int]:
         rows = self.repository.list_salaries()

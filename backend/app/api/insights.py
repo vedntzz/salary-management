@@ -8,6 +8,8 @@ from app.schemas.insights import (
     DimensionPayStats,
     DimensionQuery,
     DistributionQuery,
+    OutlierQuery,
+    OutlierReport,
     PayrollSummary,
     SalaryDistribution,
 )
@@ -40,3 +42,10 @@ def read_salary_distribution(
     query: Annotated[DistributionQuery, Query()], service: InsightsServiceDependency
 ) -> SalaryDistribution:
     return service.build_distribution(query)
+
+
+@router.get("/outliers")
+def read_pay_outliers(
+    query: Annotated[OutlierQuery, Query()], service: InsightsServiceDependency
+) -> OutlierReport:
+    return service.find_outliers(query)

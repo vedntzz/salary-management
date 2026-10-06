@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import ColumnElement, Select, UnaryExpression, func, or_, select
+from sqlalchemy import ColumnElement, Row, Select, UnaryExpression, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.currency import build_usd_equivalent_expression
@@ -106,3 +106,17 @@ class EmployeeRepository:
     def count_employees_by_country(self) -> dict[str, int]:
         statement = select(Employee.country, func.count()).group_by(Employee.country)
         return {country: count for country, count in self.session.execute(statement)}
+
+    def list_salary_records(self) -> list[Row[Any]]:
+        # Plain rows, not ORM objects, keep a 10k-row scan cheap.
+        statement = select(
+            Employee.id,
+            Employee.employee_code,
+            Employee.first_name,
+            Employee.last_name,
+            Employee.job_title,
+            Employee.country,
+            Employee.salary_amount,
+            Employee.salary_currency,
+        )
+        return list(self.session.execute(statement))
