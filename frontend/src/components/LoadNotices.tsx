@@ -1,10 +1,16 @@
 import { Button } from '@/components/ui/button'
 
-export function EmployeeLoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
+interface LoadErrorProps {
+  title: string
+  message: string
+  onRetry: () => void
+}
+
+export function LoadError({ title, message, onRetry }: LoadErrorProps) {
   return (
     <div role="alert" className="flex items-center justify-between gap-4 border border-destructive/40 bg-card px-3 py-3 text-sm">
       <p>
-        <span className="font-medium text-destructive">Couldn't load employees.</span> {message}
+        <span className="font-medium text-destructive">{title}</span> {message}
       </p>
       <Button variant="outline" size="sm" onClick={onRetry}>
         Retry

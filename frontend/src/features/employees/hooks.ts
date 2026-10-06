@@ -102,19 +102,6 @@ export function useDebouncedCallback<Args extends unknown[]>(
   )
 }
 
-export function useDelayedFlag(active: boolean, delayMs: number): boolean {
-  const [elapsed, setElapsed] = useState(false)
-  useEffect(() => {
-    if (!active) return
-    const timer = setTimeout(() => setElapsed(true), delayMs)
-    return () => {
-      clearTimeout(timer)
-      setElapsed(false)
-    }
-  }, [active, delayMs])
-  return active && elapsed
-}
-
 export function useTextFollowingUrl(urlValue: string): [string, (text: string) => void] {
   const [text, setText] = useState(urlValue)
   const [syncedValue, setSyncedValue] = useState(urlValue)

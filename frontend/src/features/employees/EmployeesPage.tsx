@@ -1,15 +1,13 @@
 import { useState } from 'react'
 import type { Employee, EmployeeListParams, EmployeeSort } from '@/api/employees'
+import { LoadError, ServerWakingNotice } from '@/components/LoadNotices'
 import { Button } from '@/components/ui/button'
+import { useServerWaking } from '@/components/useServerWaking'
 import { EmployeeDrawer, type EmployeeDrawerTarget } from './EmployeeDrawer'
 import { EmployeeFilters } from './EmployeeFilters'
-import { EmployeeLoadError, ServerWakingNotice } from './EmployeeLoadNotices'
 import { EmployeePagination } from './EmployeePagination'
 import { EmployeeTable } from './EmployeeTable'
-import { useDelayedFlag, useEmployeeListParams, useEmployees, useReturnFocus } from './hooks'
-
-// Render's free tier sleeps; a first load slower than this is almost always a cold start.
-const COLD_START_NOTICE_MS = 3000
+import { useEmployeeListParams, useEmployees, useReturnFocus } from './hooks'
 
 interface EmployeeResultsProps {
   params: EmployeeListParams
@@ -20,12 +18,12 @@ interface EmployeeResultsProps {
 
 function EmployeeResults({ params, onSortChange, onPageChange, onRowOpen }: EmployeeResultsProps) {
   const { data, error, isPending, isPlaceholderData, refetch } = useEmployees(params)
-  const isWakingServer = useDelayedFlag(isPending && !error, COLD_START_NOTICE_MS)
+  const isWakingServer = useServerWaking(isPending && !error)
   return (
     <>
       {isWakingServer && <ServerWakingNotice />}
       {error ? (
-        <EmployeeLoadError message={error.message} onRetry={() => void refetch()} />
+        <LoadError title="Couldn't load employees." message={error.message} onRetry={() => void refetch()} />
       ) : (
         <EmployeeTable employees={data?.items} isLoading={isPending} isRefreshing={isPlaceholderData}
           sort={params.sort} onSortChange={onSortChange} onRowOpen={onRowOpen} />
