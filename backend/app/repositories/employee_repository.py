@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, NamedTuple
 
 from sqlalchemy import ColumnElement, Select, UnaryExpression, func, or_, select
 from sqlalchemy.orm import Session
@@ -11,6 +11,11 @@ SORT_COLUMNS: dict[str, tuple[ColumnElement, ...]] = {
     "name": (Employee.last_name, Employee.first_name),
     "salary": (build_usd_equivalent_expression(Employee.salary_amount, Employee.salary_currency),),
     "hire_date": (Employee.hire_date,),
+}
+GROUPABLE_COLUMNS: dict[str, ColumnElement[str]] = {
+    "country": Employee.country,
+    "department": Employee.department,
+    "job_title": Employee.job_title,
 }
 SEARCHABLE_COLUMNS = (
     Employee.first_name,
@@ -38,6 +43,14 @@ def build_ordering(sort: str | None) -> list[UnaryExpression]:
         return []
     columns = SORT_COLUMNS[sort.removeprefix("-")]
     return [column.desc() if sort.startswith("-") else column.asc() for column in columns]
+
+
+class GroupSalaryRange(NamedTuple):
+    group: str
+    currency: str
+    count: int
+    lowest: int
+    highest: int
 
 
 class EmployeeRepository:
@@ -86,3 +99,30 @@ class EmployeeRepository:
     def delete(self, employee: Employee) -> None:
         self.session.delete(employee)
         self.session.commit()
+
+    def summarize_salary_ranges(self, dimension: str) -> list[GroupSalaryRange]:
+        column = GROUPABLE_COLUMNS[dimension]
+        # Currency is in the key so min and max never compare amounts across currencies.
+        statement = select(
+            column,
+            Employee.salary_currency,
+            func.count(),
+            func.min(Employee.salary_amount),
+            func.max(Employee.salary_amount),
+        ).group_by(column, Employee.salary_currency)
+        return [GroupSalaryRange(*row) for row in self.session.execute(statement)]
+
+    def list_salaries_by_group(self, dimension: str) -> list[tuple[str, str, int]]:
+        column = GROUPABLE_COLUMNS[dimension]
+        statement = select(column, Employee.salary_currency, Employee.salary_amount)
+        return [tuple(row) for row in self.session.execute(statement)]
+
+    def list_salaries(self, country: str | None = None) -> list[tuple[str, int]]:
+        statement = select(Employee.salary_currency, Employee.salary_amount)
+        if country is not None:
+            statement = statement.where(Employee.country == country)
+        return [tuple(row) for row in self.session.execute(statement)]
+
+    def count_employees_by_country(self) -> dict[str, int]:
+        statement = select(Employee.country, func.count()).group_by(Employee.country)
+        return {country: count for country, count in self.session.execute(statement)}
