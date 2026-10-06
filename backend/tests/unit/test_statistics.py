@@ -1,6 +1,10 @@
 import pytest
 
-from app.services.statistics import build_salary_histogram, calculate_median_salary
+from app.services.statistics import (
+    build_salary_histogram,
+    calculate_average_salary,
+    calculate_median_salary,
+)
 
 
 def test_median_returns_middle_value_for_odd_count() -> None:
@@ -55,6 +59,49 @@ def test_median_rejects_empty_list() -> None:
     # Act / Assert
     with pytest.raises(ValueError):
         calculate_median_salary(salaries)
+
+
+def test_average_returns_mean_for_odd_count() -> None:
+    # Arrange
+    salaries = [100, 200, 600]
+
+    # Act
+    average = calculate_average_salary(salaries)
+
+    # Assert
+    assert average == 300
+
+
+def test_average_returns_mean_for_even_count() -> None:
+    # Arrange
+    salaries = [100, 200, 300, 400]
+
+    # Act
+    average = calculate_average_salary(salaries)
+
+    # Assert
+    assert average == 250
+
+
+def test_average_rounds_half_up() -> None:
+    # Arrange
+    salaries = [100, 201]  # mean is 150.5
+
+    # Act
+    average = calculate_average_salary(salaries)
+
+    # Assert
+    assert average == 151
+    assert isinstance(average, int)
+
+
+def test_average_rejects_empty_list() -> None:
+    # Arrange
+    salaries: list[int] = []
+
+    # Act / Assert
+    with pytest.raises(ValueError):
+        calculate_average_salary(salaries)
 
 
 def test_histogram_counts_sum_to_total_salaries() -> None:
