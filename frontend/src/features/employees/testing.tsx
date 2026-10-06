@@ -7,7 +7,8 @@ export const FILTER_OPTIONS = {
   countries: ['Germany', 'India', 'United States'],
   departments: ['Engineering', 'Finance'],
   job_titles: ['Analyst', 'Engineer', 'Senior Engineer'],
-  currency_by_country: { Germany: 'EUR', India: 'INR', 'United States': 'USD' },
+  // Canada is supported but has no employees, so only the form should offer it (D-017).
+  currency_by_country: { Canada: 'CAD', Germany: 'EUR', India: 'INR', 'United States': 'USD' },
 }
 
 function buildEmployee(id: number, fields: Record<string, string | number>) {

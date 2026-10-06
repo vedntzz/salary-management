@@ -38,6 +38,22 @@ describe('Employee form: create', () => {
     expect(within(formField(dialog, 'Department')).getByRole('option', { name: 'Finance' })).toBeInTheDocument()
   })
 
+  it('test_employee_form_offers_every_supported_country_but_filter_only_staffed_ones', async () => {
+    // Arrange
+    const user = userEvent.setup()
+    mockEmployeesApi()
+    renderEmployeesAt('/employees')
+    const countryFilter = screen.getByLabelText('Country')
+    await within(countryFilter).findByRole('option', { name: 'India' })
+
+    // Act
+    const dialog = await openAddEmployeeForm(user)
+
+    // Assert
+    expect(await within(formField(dialog, 'Country')).findByRole('option', { name: 'Canada' })).toBeInTheDocument()
+    expect(within(countryFilter).queryByRole('option', { name: 'Canada' })).not.toBeInTheDocument()
+  })
+
   it('test_employee_form_flags_every_required_field_and_sends_nothing', async () => {
     // Arrange
     const user = userEvent.setup()
