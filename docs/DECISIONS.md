@@ -89,3 +89,11 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 - **Employee codes come from the highest existing code.** Concurrent creates could race. Single HR user, and the unique constraint is the backstop.
 - **Emails are compared in lowercase but stored as typed.** Next: normalize on write.
 - **Search doesn't escape `%` or `_`.** Low impact, known.
+
+## D-016 · Summary is USD-only; USD stats convert each salary, then aggregate
+**Context:** The summary totals payroll across every country, and by-dimension groups can mix currencies.
+**Decision:** `GET /api/insights/summary` takes no currency parameter. Its total and median payroll are always in USD, and every insights response labels money with an ISO code (`"USD"`, `"INR"`). Wherever a stat is reported in USD, each salary is converted to whole USD first (D-003, half-up) and the count, min, max, avg, and median are taken over those integers.
+**Why:** A total across currencies only means something in one currency. Converting per salary keeps group stats consistent with the per-employee USD values the HR manager sees elsewhere.
+**Rejected:**
+- *`currency=local` with `null` totals:* a UI trap, since the cards would render blanks or zeros for a valid request.
+- *Converting the aggregated totals:* rounding differs from the per-row values, so a total wouldn't equal the sum of the figures shown beside it.
