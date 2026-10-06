@@ -16,6 +16,8 @@ Country = Literal[
     "Brazil",
 ]
 Department = Literal["Engineering", "Product", "Sales", "Marketing", "Finance", "People"]
+SortOption = Literal["name", "-name", "salary", "-salary", "hire_date", "-hire_date"]
+MAX_PAGE_SIZE = 100
 
 
 class EmployeeFields(BaseModel):
@@ -68,3 +70,32 @@ class EmployeeRead(EmployeeFields):
     salary_currency: str
     created_at: datetime
     updated_at: datetime
+
+
+class EmployeeQuery(BaseModel):
+    search: str | None = None
+    country: str | None = None
+    department: str | None = None
+    job_title: str | None = None
+    sort: SortOption | None = None
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1)
+
+    @field_validator("page_size")
+    @classmethod
+    def cap_page_size(cls, value: int) -> int:
+        # Clamp rather than reject, so the browser never pulls more than one page (D-007).
+        return min(value, MAX_PAGE_SIZE)
+
+
+class EmployeePage(BaseModel):
+    items: list[EmployeeRead]
+    total: int
+    page: int
+    page_size: int
+
+
+class FilterOptions(BaseModel):
+    countries: list[str]
+    departments: list[str]
+    job_titles: list[str]

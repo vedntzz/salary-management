@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
+from sqlalchemy import ColumnElement, case
+
 CURRENCY_BY_COUNTRY: dict[str, str] = {
     "United States": "USD",
     "United Kingdom": "GBP",
@@ -31,3 +33,11 @@ def convert_usd_to_local(amount_usd: int, currency: str) -> int:
         raise ValueError(f"Unsupported currency: {currency}")
     amount_local = Decimal(amount_usd) * LOCAL_UNITS_PER_USD[currency]
     return int(amount_local.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def build_usd_equivalent_expression(
+    amount: ColumnElement[int], currency: ColumnElement[str]
+) -> ColumnElement[float]:
+    # Float division is for ORDER BY only; it is never stored or returned (D-004 exception).
+    rate = case({code: float(rate) for code, rate in LOCAL_UNITS_PER_USD.items()}, value=currency)
+    return amount / rate

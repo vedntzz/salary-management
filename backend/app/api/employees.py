@@ -1,10 +1,16 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.db import get_session
-from app.schemas.employee import EmployeeCreate, EmployeeRead, EmployeeUpdate
+from app.schemas.employee import (
+    EmployeeCreate,
+    EmployeePage,
+    EmployeeQuery,
+    EmployeeRead,
+    EmployeeUpdate,
+)
 from app.services.employee_service import EmployeeService, build_employee_service
 
 router = APIRouter(prefix="/api/employees", tags=["employees"])
@@ -15,6 +21,13 @@ def get_employee_service(session: Annotated[Session, Depends(get_session)]) -> E
 
 
 EmployeeServiceDependency = Annotated[EmployeeService, Depends(get_employee_service)]
+
+
+@router.get("")
+def list_employees(
+    query: Annotated[EmployeeQuery, Query()], service: EmployeeServiceDependency
+) -> EmployeePage:
+    return service.list_employees(query)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

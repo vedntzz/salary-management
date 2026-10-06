@@ -13,8 +13,8 @@ class Employee(Base):
     employee_code: Mapped[str] = mapped_column(String(16), unique=True)
     first_name: Mapped[str] = mapped_column(String(100))
     last_name: Mapped[str] = mapped_column(String(100))
-    email: Mapped[str] = mapped_column(String(255), unique=True)
-    # Indexed for the directory filters (D-007); email is covered by its unique index.
+    # Indexed for search and the directory filters (D-007).
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     job_title: Mapped[str] = mapped_column(String(100), index=True)
     department: Mapped[str] = mapped_column(String(50), index=True)
     country: Mapped[str] = mapped_column(String(50), index=True)

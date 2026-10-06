@@ -2,7 +2,14 @@ from sqlalchemy.orm import Session
 
 from app.models.employee import Employee
 from app.repositories.employee_repository import EmployeeRepository
-from app.schemas.employee import EmployeeCreate, EmployeeUpdate
+from app.schemas.employee import (
+    EmployeeCreate,
+    EmployeePage,
+    EmployeeQuery,
+    EmployeeRead,
+    EmployeeUpdate,
+    FilterOptions,
+)
 from app.services.currency import CURRENCY_BY_COUNTRY
 
 EMPLOYEE_CODE_PREFIX = "EMP-"
@@ -27,6 +34,22 @@ class EmployeeService:
         if employee is None:
             raise EmployeeNotFoundError()
         return employee
+
+    def list_employees(self, query: EmployeeQuery) -> EmployeePage:
+        employees, total = self.repository.search(query)
+        return EmployeePage(
+            items=[EmployeeRead.model_validate(employee) for employee in employees],
+            total=total,
+            page=query.page,
+            page_size=query.page_size,
+        )
+
+    def list_filter_options(self) -> FilterOptions:
+        return FilterOptions(
+            countries=self.repository.find_distinct_values("country"),
+            departments=self.repository.find_distinct_values("department"),
+            job_titles=self.repository.find_distinct_values("job_title"),
+        )
 
     def create_employee(self, payload: EmployeeCreate) -> Employee:
         self.ensure_email_available(payload.email)
