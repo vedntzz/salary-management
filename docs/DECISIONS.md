@@ -31,6 +31,8 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 **Decision:** Annual salary as an integer in whole local currency units.
 **Why:** Floats drift (0.1 + 0.2). Annual salaries don't need cents.
 **Rejected:** *Decimal columns*, because they're unnecessary precision for annual figures and slower to aggregate.
+**Scoped exception: sorting by USD equivalent.** `sort=salary` ranks employees by `salary_amount / rate` computed in SQL, which is a float. It's used only inside `ORDER BY`, never stored, returned, or aggregated, and the expression lives in `app/currency.py` (D-003). Float precision can't flip the order of two salaries unless they're equal to within about 1e-12.
+*Rejected:* integer arithmetic with pre-scaled rates, because rounding the scaled rates can swap two salaries that are close in USD, and sorting in Python would mean loading every matching row instead of one page.
 
 ## D-005 · SQLite locally and in tests, Postgres in production
 **Context:** Render's free tier has an ephemeral filesystem, so SQLite there would lose every edit on restart.
@@ -80,3 +82,10 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 **Rejected:**
 - *Commit the raw transcript only:* complete, but nobody reads 10,000 lines. The receipt is the summary, and the transcript stays as backup.
 - *Hide tickets that drifted:* drift is the honest signal. Explaining it is worth more than a clean-looking table.
+
+## D-015 · Known trade-offs from the employees API
+- **Seed is uniform random.** Every country has about 1,250 people, so headcount charts look synthetic. Next: weighted distribution.
+- **`create_all`, no migrations.** Alembic was rejected: single table, timeboxed. A model change means deleting the local DB.
+- **Employee codes come from the highest existing code.** Concurrent creates could race. Single HR user, and the unique constraint is the backstop.
+- **Emails are compared in lowercase but stored as typed.** Next: normalize on write.
+- **Search doesn't escape `%` or `_`.** Low impact, known.

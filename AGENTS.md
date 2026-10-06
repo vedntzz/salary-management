@@ -1,4 +1,4 @@
-# CLAUDE.md — Rules for the agent
+# AGENTS.md — Rules for the agent
 
 Read this fully before every task. If anything here conflicts with a prompt, **stop and ask**.
 
