@@ -44,3 +44,17 @@ def test_cors_preflight_omits_allow_origin_when_origin_not_listed(
 
     # Assert
     assert "access-control-allow-origin" not in headers
+
+
+def test_cors_preflight_allows_origin_when_env_entry_has_trailing_slash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    monkeypatch.setenv("CORS_ORIGINS", "https://x.vercel.app/")
+    client = TestClient(create_app(Settings(_env_file=None)))
+
+    # Act
+    headers = send_preflight(client, "https://x.vercel.app")
+
+    # Assert
+    assert headers.get("access-control-allow-origin") == "https://x.vercel.app"
