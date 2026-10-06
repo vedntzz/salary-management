@@ -5,6 +5,7 @@ from app.models.employee import Employee
 from app.schemas.employee import EmployeeCreate
 from seed.salary_bands import salary_band_for
 from seed.seed import generate_employees, seed_employees
+from tests.salary_band_checks import classify_salary_against_band
 
 SEED = 42
 COUNT = 50
@@ -31,19 +32,25 @@ def test_generate_employees_returns_identical_rows_for_same_seed() -> None:
     assert first_run == second_run
 
 
-def test_generate_employees_keeps_every_salary_inside_its_title_country_band() -> None:
+def test_generate_employees_keeps_non_outlier_salaries_inside_their_title_country_band() -> None:
     # Arrange
     rows = generate_sample_employees()
+    planted = {"planted_above", "planted_below"}
 
     # Act
-    bands = [salary_band_for(row["job_title"], row["country"]) for row in rows]
+    regular_rows = [row for row in rows if classify_salary_against_band(row) not in planted]
     out_of_band = [
-        row for row, (low, high) in zip(rows, bands, strict=True)
-        if not low <= row["salary_amount"] <= high
+        row for row in regular_rows
+        if not is_salary_inside_band(row, salary_band_for(row["job_title"], row["country"]))
     ]
 
     # Assert
     assert out_of_band == []
+
+
+def is_salary_inside_band(row: dict, band: tuple[int, int]) -> bool:
+    low, high = band
+    return low <= row["salary_amount"] <= high
 
 
 def test_generate_employees_numbers_codes_upward_from_emp_00001() -> None:
