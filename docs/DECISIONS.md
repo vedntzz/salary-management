@@ -114,3 +114,9 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 - *Copy the map into the frontend:* two lists to keep in sync, and they would drift silently.
 - *Fill the form's Country dropdown from `countries`:* on an empty database, or for a new country, the first employee could never be added.
 - *A separate `/api/meta/currencies` endpoint:* a second request for eight entries the form loads alongside the filters anyway.
+
+## D-018 · Insights UI choices
+- **The median chart is always USD.** Bars in mixed currencies on one axis are meaningless. Only the table switches to local currency.
+- **Local currency is only offered when grouping by country.** Switching away resets to USD.
+- **The histogram reuses the employees filter-options hook.** One shared cache, at the cost of coupling the two features.
+- **Frontend line limits aren't automated.** `check_limits.py` scans only the backend. Frontend limits were checked by eye.
