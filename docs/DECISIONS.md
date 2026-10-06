@@ -82,3 +82,10 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 **Rejected:**
 - *Commit the raw transcript only:* complete, but nobody reads 10,000 lines. The receipt is the summary, and the transcript stays as backup.
 - *Hide tickets that drifted:* drift is the honest signal. Explaining it is worth more than a clean-looking table.
+
+## D-015 · Known trade-offs from the employees API
+- **Seed is uniform random.** Every country has about 1,250 people, so headcount charts look synthetic. Next: weighted distribution.
+- **`create_all`, no migrations.** Alembic was rejected: single table, timeboxed. A model change means deleting the local DB.
+- **Employee codes come from the highest existing code.** Concurrent creates could race. Single HR user, and the unique constraint is the backstop.
+- **Emails are compared in lowercase but stored as typed.** Next: normalize on write.
+- **Search doesn't escape `%` or `_`.** Low impact, known.
