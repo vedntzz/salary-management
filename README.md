@@ -1,91 +1,149 @@
-# ACME Salary Management
+# CardStats — Pokémon → catalog migration rehearsal
 
-A web app that replaces the HR team's salary spreadsheets. One HR Manager can manage 10,000 employees across countries and answer **how does ACME pay its people?** without building a single pivot table.
+`pokemon_new` is the incoming Pokémon data. `catalog_old` is the existing catalog it merges into.
 
-> **Live app:** added after deploy · **API docs:** `/docs` on the API URL · **Demo video:** added after recording
-> The API runs on Render's free tier, so the first request after idle can take 30–50 s to wake up.
+Proves that the incoming Pokémon database can be promoted into the LAN catalog
+without creating duplicates, orphaning foreign keys, or disturbing existing
+sports data — and that re-running it changes nothing.
 
-## What it does
-- **Employee directory:** search by name, email, or code. Filter by country, department, or title. Sort and paginate server-side.
-- **Manage employees:** add, edit, and delete with validation (positive salary, supported country, unique email).
-- **Pay insights:** headcount, min, max, average, and median by country, department, or job title, in local currency or USD.
-- **Salary distribution:** a histogram of pay, filterable by country.
-- **Pay outliers:** employees more than 25% above or below the median for their role and country.
+Everything below runs locally against two throwaway databases. No real server
+is touched.
 
-## Why it's built this way
-The full reasoning, including what I rejected and why, is in [`docs/DECISIONS.md`](docs/DECISIONS.md). The short version:
+---
 
-| Choice | Reason |
-| --- | --- |
-| Salaries stored in local currency, reported in local or USD | Local pay is the truth. Fixed, dated FX rates keep reports deterministic. |
-| Money as integers | No float drift in salary math |
-| SQLite locally, Postgres in prod | Render's free disk is wiped on restart, so SQLite there would lose edits |
-| Median computed in Python | SQLite has no percentile function, so this keeps behavior identical on both DBs |
-| Outliers by role and country median | Compares like with like. A z-score means nothing to HR. |
-| Simple layered backend | Nothing here needs swapping, so hexagonal would be complexity for show |
+## Findings
 
-What's deliberately left out (auth, salary history, live FX, payroll, Excel import) and why: [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md).
+**1. `set_code` is NULL on all 203 card sets.**
+The natural key previously agreed on — `set_code + card_number + language_id +
+version_kind_id` — cannot be built from this data. Two of its four components
+don't exist.
 
-## Architecture
-```
-React (Vite) ── TanStack Query ──► FastAPI
-                                    api/          thin routers
-                                    services/     business logic, currency, statistics
-                                    repositories/ all SQL
-                                    models/       SQLAlchemy
-                                        │
-                              SQLite (dev/test) · Postgres (prod)
-```
+**2. The replacement key is unique across the full dataset.**
+`(year, release name, set name, card number)` yields 20,443 distinct keys
+across 20,443 cards. Zero collisions. Product releases (196) and card sets
+(203) are likewise unique. This key is already encoded in the schema as
+`product_release_identity_unique`, `card_set_identity_unique` and
+`card_identity_unique`, so `ON CONFLICT` resolves against it natively.
 
-## Quick start
-**Prerequisites:** Python 3.12, [uv](https://docs.astral.sh/uv/), Node 20
+**3. `card_variant` and `card_version` are empty — and so is `version_kind`.**
+No card in this dataset has a `card_version_id`. That is the identifier the
+grading pipeline returns, that `card_image` and `card_sale` attach to, and that
+a user's collection would reference. `card_variant.version_kind_id` is NOT NULL
+while `version_kind` has zero rows, so variants cannot be created until that
+lookup table is seeded. `language` and `card_external_id` are also empty, so
+there is currently no upstream anchor for matching against other sources.
+
+This migration therefore covers `card_rarity → product_release → card_set →
+card`. The variant and version layers are out of scope because they contain no
+data, not because the pattern doesn't extend to them.
+
+## Row counts in the source
+
+| table | rows |
+|---|---|
+| `card` | 20,443 |
+| `card_set` | 203 |
+| `product_release` | 196 |
+| `card_rarity` | 22 |
+| `set_family` | 20 |
+| `source_system` | 3 |
+| `brand` / `category` / `genre` | 1 each |
+| `card_variant`, `card_version`, `version_kind`, `language`, `card_external_id` | 0 |
+
+---
+
+## The problem this solves
+
+Both databases generate their own primary keys with `gen_random_uuid()`. The
+same logical row — the TCG category, the Pokémon genre — carries a different
+UUID on each side. Copying rows across verbatim produces a second TCG category,
+and every Pokémon record underneath attaches to whichever one the loader
+happened to reference.
+
+PostgreSQL raises no error. The catalog is simply split in two, and nobody
+notices until search returns duplicates of everything.
+
+The migration resolves identity by natural key instead, records every
+`source_id → target_id` pair in `staging.id_map`, and rewrites foreign keys in
+dependency order — parents before children.
+
+## Prerequisites
+
+PostgreSQL **18** or newer; the dumps are 18.4. On macOS, Postgres.app is the
+path of least resistance. Confirm with:
 
 ```bash
-# backend
-cd backend
-uv sync
-python -m seed.seed          # creates 10,000 employees (deterministic, seed 42)
-uvicorn app.main:app --reload
-# API at http://localhost:8000, docs at http://localhost:8000/docs
-
-# frontend (new terminal)
-cd frontend
-npm install
-npm run dev
-# UI at http://localhost:5173
+PG=/Applications/Postgres.app/Contents/Versions/latest/bin
+$PG/psql --version
 ```
 
-## Running tests
+Use `$PG/` on every command — a system Postgres earlier on `PATH` will shadow
+it and fail with `unsupported version` errors.
+
+## Files
+
+| file | purpose |
+|---|---|
+| `01_seed_catalog_old.sql` | Makes the target look like LAN, with a deliberate `TCG` collision |
+| `02_create_staging.sql` | Staging tables for the reference rows, plus `staging.id_map` |
+| `03_migrate.sql` | Promotes reference rows by natural key |
+| `04_assert.sql` | 10 checks on the reference layer |
+| `05_stage_cards.sql` | Staging tables for the card hierarchy |
+| `06_migrate_cards.sql` | Promotes `card_rarity → product_release → card_set → card` |
+| `07_assert_cards.sql` | 12 checks on the card layer |
+| `run.sh` | Full end-to-end run |
+
+## Running it
+
 ```bash
-cd backend && pytest -q          # unit + integration + code-limits check
-cd frontend && npm run test      # component and hook tests
+cd ~/migration
+bash run.sh 2>&1 | tail -60
 ```
-Tests need no network and no external database, and they give the same result every run.
 
-## How this was built
-- **One sprint, one branch per ticket, one PR per branch.** The plan and board are in [`docs/SPRINT.md`](docs/SPRINT.md).
-- **Strict TDD.** Every feature shows a `test(...)` commit before its `feat(...)` commit. PRs are merged with merge commits, never squashed, so that history survives.
-- **Every agent session recorded.** Each ticket ran under [The Session](https://www.npmjs.com/package/@vedantzz/session), my own published CLI. I declared the files the agent could touch before it started, and the receipt shows what it actually touched, what it asked permission for, and what it cost. Receipts are in [`docs/sessions/`](docs/sessions/), with a summary in the AI log.
-- **AI-assisted, human-steered.** Claude Code worked under the rules in [`CLAUDE.md`](CLAUDE.md). The prompts I used are in [`docs/PROMPTS.md`](docs/PROMPTS.md), and what I accepted, changed, or rejected is in [`docs/AI_LOG.md`](docs/AI_LOG.md).
+Expected on a first run: reference rows promote with `category` reporting
+`matched_existing` — the planted collision resolving — then 22 / 196 / 203 /
+20,443 rows `inserted_new`, then 10/10 and 12/12 assertions passing.
 
-## Performance
-Measured at 10,000 rows. Numbers are recorded in [`docs/AI_LOG.md`](docs/AI_LOG.md) once deployed.
-- Indexes on `country`, `department`, `job_title`, `email`
-- Page size capped at 100, and the browser never receives the full table
-- Seed uses a bulk insert, so 10k rows load in a few seconds
+## Proving idempotency
 
-## Project docs
-| File | What's in it |
-| --- | --- |
-| [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | One-page requirements: goal, scope, what's out and why |
-| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Every design decision with rejected alternatives |
-| [`docs/SPRINT.md`](docs/SPRINT.md) | Sprint plan, tickets, branches, PR order |
-| [`docs/PROMPTS.md`](docs/PROMPTS.md) | The prompt cycle given to the agent |
-| [`docs/AI_LOG.md`](docs/AI_LOG.md) | Where AI helped, where I overruled it, plus session data per ticket |
-| [`docs/sessions/`](docs/sessions/) | One receipt per ticket: declared scope vs actual changes, write checks, tokens, cost |
-| [`CLAUDE.md`](CLAUDE.md) | The rules the coding agent follows |
+```bash
+$PG/psql -d catalog_old -f 03_migrate.sql
+$PG/psql -d catalog_old -f 06_migrate_cards.sql
+$PG/psql -d catalog_old -f 04_assert.sql
+$PG/psql -d catalog_old -f 07_assert_cards.sql
+```
 
-## What I'd build next
-1. Excel import with a row-level validation report, since that's how HR's real data gets in.
-2. Salary history (a `salary_changes` table) to answer "how has pay moved?"
-3. Auth and an audit log once there's more than one user.
+Second run: every table reports `matched_existing`, row counts unchanged, all
+assertions still passing.
+
+## The negative control
+
+Shows what the naive approach does:
+
+```sql
+INSERT INTO catalog.category (id, name, normalized_name, sort_order)
+SELECT gen_random_uuid(), name, name || ' ', 1 FROM staging.category;
+
+SELECT id, name, normalized_name FROM catalog.category ORDER BY name;
+```
+
+Two `TCG` rows, two different UUIDs, no error raised. The trailing space
+sidesteps the unique constraint, which is exactly what two systems with
+slightly different normalization rules would produce in practice.
+
+Reset with `01_seed_catalog_old.sql` afterwards.
+
+## What comes next
+
+- Seed `version_kind` and `language`, then load `card_variant` and
+  `card_version` upstream. Until that happens, nothing downstream of `card` can
+  be built.
+- Populate `card_external_id` from the PokemonTCG API so there is a stable
+  upstream anchor for cross-source matching.
+- Extend the same map-then-rewrite pattern to the variant and version layers
+  once they hold data.
+- With multiple scraped sources, staging becomes per-source and identity
+  resolution needs arbitration. The schema already anticipates this:
+  `source_system.priority`, `card_external_id.match_confidence` and
+  `.is_primary`, and the alias tables for sets, releases, players and
+  parallels.
