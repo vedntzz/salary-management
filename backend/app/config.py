@@ -26,9 +26,9 @@ class Settings(BaseSettings):
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def split_comma_separated_origins(cls, origins: str | list[str]) -> list[str]:
-        if isinstance(origins, list):
-            return origins
-        return [origin.strip() for origin in origins.split(",") if origin.strip()]
+        entries = origins if isinstance(origins, list) else origins.split(",")
+        # Browsers send Origin without a trailing slash, so a pasted site URL would never match.
+        return [entry.strip().rstrip("/") for entry in entries if entry.strip()]
 
 
 settings = Settings()
