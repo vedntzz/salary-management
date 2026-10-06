@@ -10,6 +10,7 @@ dependencies = [
     "pydantic",
     "pydantic-settings",
     "email-validator",
+    "psycopg[binary]>=3.3.6",
 ]
 
 [dependency-groups]
