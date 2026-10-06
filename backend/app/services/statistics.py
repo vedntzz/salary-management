@@ -9,6 +9,10 @@ class SalaryBin:
     count: int
 
 
+def round_half_up(value: Decimal) -> int:
+    return int(value.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
 def calculate_median_salary(salaries: list[int]) -> int:
     if not salaries:
         raise ValueError("Cannot take the median of no salaries")
@@ -16,8 +20,13 @@ def calculate_median_salary(salaries: list[int]) -> int:
     middle = len(ordered) // 2
     if len(ordered) % 2:
         return ordered[middle]
-    mean = Decimal(ordered[middle - 1] + ordered[middle]) / 2
-    return int(mean.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return round_half_up(Decimal(ordered[middle - 1] + ordered[middle]) / 2)
+
+
+def calculate_average_salary(salaries: list[int]) -> int:
+    if not salaries:
+        raise ValueError("Cannot take the average of no salaries")
+    return round_half_up(Decimal(sum(salaries)) / len(salaries))
 
 
 def build_salary_histogram(salaries: list[int], bins: int) -> list[SalaryBin]:

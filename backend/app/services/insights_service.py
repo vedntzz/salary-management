@@ -1,10 +1,9 @@
 from collections import defaultdict
-from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy.orm import Session
 
 from app.currency import CURRENCY_BY_COUNTRY, convert_local_to_usd
-from app.repositories.employee_repository import EmployeeRepository, GroupSalaryRange
+from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.insights import (
     DimensionPayStats,
     DimensionQuery,
@@ -14,36 +13,25 @@ from app.schemas.insights import (
     SalaryBinRead,
     SalaryDistribution,
 )
-from app.services.statistics import build_salary_histogram, calculate_median_salary
+from app.services.statistics import (
+    build_salary_histogram,
+    calculate_average_salary,
+    calculate_median_salary,
+)
 
 REPORTING_CURRENCY = "USD"
-SalaryRange = tuple[int, int, int]
 
 
-def calculate_average_salary(salaries: list[int]) -> int:
-    mean = Decimal(sum(salaries)) / len(salaries)
-    return int(mean.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-
-
-def convert_range(salary_range: GroupSalaryRange, in_usd: bool) -> SalaryRange:
-    lowest, highest = salary_range.lowest, salary_range.highest
-    if in_usd:
-        # Half-up conversion never reverses order, so converted min/max stay the extremes.
-        lowest = convert_local_to_usd(lowest, salary_range.currency)
-        highest = convert_local_to_usd(highest, salary_range.currency)
-    return salary_range.count, lowest, highest
-
-
-def merge_ranges_by_group(ranges: list[GroupSalaryRange], in_usd: bool) -> dict[str, SalaryRange]:
-    merged: dict[str, SalaryRange] = {}
-    for salary_range in ranges:
-        count, lowest, highest = convert_range(salary_range, in_usd)
-        if salary_range.group in merged:
-            seen_count, seen_lowest, seen_highest = merged[salary_range.group]
-            count, lowest = count + seen_count, min(lowest, seen_lowest)
-            highest = max(highest, seen_highest)
-        merged[salary_range.group] = (count, lowest, highest)
-    return merged
+def build_group_stats(group: str, currency: str, salaries: list[int]) -> GroupPayStats:
+    return GroupPayStats(
+        group=group,
+        currency=currency,
+        count=len(salaries),
+        min=min(salaries),
+        max=max(salaries),
+        avg=calculate_average_salary(salaries),
+        median=calculate_median_salary(salaries),
+    )
 
 
 class InsightsService:
@@ -62,21 +50,12 @@ class InsightsService:
 
     def compare_pay_by_dimension(self, query: DimensionQuery) -> DimensionPayStats:
         in_usd = query.currency == "usd"
-        ranges = merge_ranges_by_group(
-            self.repository.summarize_salary_ranges(query.dimension), in_usd
-        )
-        salaries = self.group_salaries(query.dimension, in_usd)
+        groups = self.group_salaries(query.dimension, in_usd)
         rows = [
-            GroupPayStats(
-                group=group,
-                currency=REPORTING_CURRENCY if in_usd else CURRENCY_BY_COUNTRY[group],
-                count=count,
-                min=lowest,
-                max=highest,
-                avg=calculate_average_salary(salaries[group]),
-                median=calculate_median_salary(salaries[group]),
+            build_group_stats(
+                group, REPORTING_CURRENCY if in_usd else CURRENCY_BY_COUNTRY[group], salaries
             )
-            for group, (count, lowest, highest) in sorted(ranges.items())
+            for group, salaries in sorted(groups.items())
         ]
         return DimensionPayStats(dimension=query.dimension, rows=rows)
 

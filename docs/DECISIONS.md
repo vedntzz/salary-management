@@ -41,11 +41,13 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 - *SQLite in production:* data loss on every deploy or restart.
 - *Postgres in tests:* slower and needs Docker. Integration tests cover the SQL I write by hand.
 
-## D-006 · Median computed in Python, other aggregates in SQL
-**Context:** SQLite has no `percentile_cont`, and Postgres does.
-**Decision:** SQL handles count, min, max, and avg with `GROUP BY`. The median is computed in `statistics.py` from the grouped salaries.
-**Why:** Identical behavior on both databases, and 10k integers sort in about 1 ms.
-**Rejected:** *Database-specific median SQL*, because it would split the code paths and let tests pass on SQLite while production breaks.
+## D-006 · Salary aggregates computed in Python, not SQL
+**Context:** SQLite has no `percentile_cont`, and Postgres does. D-016 requires converting each salary to USD before aggregating.
+**Decision:** Each insight request loads the matching `(group, currency, salary)` rows in one query. The insights service computes count, min, and max from those integers, and `statistics.py` the avg and median, after conversion when reporting in USD.
+**Why:** Convert-then-aggregate can't be done in SQL without float division (D-004). Identical behavior on both databases, and 10k integers sort and sum in about 1 ms.
+**Rejected:**
+- *Database-specific median SQL:* it would split the code paths and let tests pass on SQLite while production breaks.
+- *SQL `GROUP BY` for count/min/max alongside the salary list:* a second code path that computes the same numbers the list already gives.
 
 ## D-007 · Server-side search, filter, sort, pagination
 **Decision:** `GET /api/employees?search&country&department&job_title&sort&page&page_size`, with page_size capped at 100. Indexes on `country`, `department`, `job_title`, and `email`.
