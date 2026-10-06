@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from app.services.currency import CURRENCY_BY_COUNTRY, convert_usd_to_local
+from app.currency import CURRENCY_BY_COUNTRY, convert_usd_to_local
 
 TITLES_BY_DEPARTMENT: dict[str, list[str]] = {
     "Engineering": [

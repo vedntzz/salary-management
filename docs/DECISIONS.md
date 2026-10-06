@@ -31,7 +31,7 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 **Decision:** Annual salary as an integer in whole local currency units.
 **Why:** Floats drift (0.1 + 0.2). Annual salaries don't need cents.
 **Rejected:** *Decimal columns*, because they're unnecessary precision for annual figures and slower to aggregate.
-**Scoped exception: sorting by USD equivalent.** `sort=salary` ranks employees by `salary_amount / rate` computed in SQL, which is a float. It's used only inside `ORDER BY`, never stored, returned, or aggregated, and the expression lives in `services/currency.py` (D-003). Float precision can't flip the order of two salaries unless they're equal to within about 1e-12.
+**Scoped exception: sorting by USD equivalent.** `sort=salary` ranks employees by `salary_amount / rate` computed in SQL, which is a float. It's used only inside `ORDER BY`, never stored, returned, or aggregated, and the expression lives in `app/currency.py` (D-003). Float precision can't flip the order of two salaries unless they're equal to within about 1e-12.
 *Rejected:* integer arithmetic with pre-scaled rates, because rounding the scaled rates can swap two salaries that are close in USD, and sorting in Python would mean loading every matching row instead of one page.
 
 ## D-005 · SQLite locally and in tests, Postgres in production

@@ -3,7 +3,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from app.services.currency import LOCAL_UNITS_PER_USD
+from app.currency import LOCAL_UNITS_PER_USD
 from tests.factories import build_employee_payload
 
 Rows = list[dict[str, Any]]

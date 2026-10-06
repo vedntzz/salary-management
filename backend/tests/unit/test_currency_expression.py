@@ -1,7 +1,7 @@
 from sqlalchemy import literal, select
 from sqlalchemy.orm import Session
 
-from app.services.currency import build_usd_equivalent_expression
+from app.currency import build_usd_equivalent_expression
 
 
 def evaluate_usd_equivalent(session: Session, amount: int, currency: str) -> object:

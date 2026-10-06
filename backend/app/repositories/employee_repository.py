@@ -3,9 +3,9 @@ from typing import Any
 from sqlalchemy import ColumnElement, Select, UnaryExpression, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.currency import build_usd_equivalent_expression
 from app.models.employee import Employee
 from app.schemas.employee import EmployeeQuery
-from app.services.currency import build_usd_equivalent_expression
 
 SORT_COLUMNS: dict[str, tuple[ColumnElement, ...]] = {
     "name": (Employee.last_name, Employee.first_name),

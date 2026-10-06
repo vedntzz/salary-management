@@ -2,8 +2,8 @@ from typing import get_args
 
 import pytest
 
+from app.currency import CURRENCY_BY_COUNTRY, convert_usd_to_local
 from app.schemas.employee import Country
-from app.services.currency import CURRENCY_BY_COUNTRY, convert_usd_to_local
 
 
 def test_currency_map_covers_every_supported_country() -> None:

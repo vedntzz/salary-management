@@ -6,9 +6,9 @@ from typing import Any
 from sqlalchemy import delete, insert
 from sqlalchemy.orm import Session
 
+from app.currency import CURRENCY_BY_COUNTRY
 from app.db import Base, SessionLocal, engine
 from app.models.employee import Employee
-from app.services.currency import CURRENCY_BY_COUNTRY
 from seed.salary_bands import TITLES_BY_DEPARTMENT, salary_band_for
 
 SEED = 42

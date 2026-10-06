@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app.currency import CURRENCY_BY_COUNTRY
 from app.models.employee import Employee
 from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.employee import (
@@ -10,7 +11,6 @@ from app.schemas.employee import (
     EmployeeUpdate,
     FilterOptions,
 )
-from app.services.currency import CURRENCY_BY_COUNTRY
 
 EMPLOYEE_CODE_PREFIX = "EMP-"
 

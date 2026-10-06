@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 
-from app.services.currency import CURRENCY_BY_COUNTRY
+from app.currency import CURRENCY_BY_COUNTRY
 
 Country = Literal[
     "United States",
