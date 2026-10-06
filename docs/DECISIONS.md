@@ -105,3 +105,12 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 **Rejected:**
 - *`currency=local` with `null` totals:* a UI trap, since the cards would render blanks or zeros for a valid request.
 - *Converting the aggregated totals:* rounding differs from the per-row values, so a total wouldn't equal the sum of the figures shown beside it.
+
+## D-017 · The frontend gets country currencies from `/api/meta/filters`
+**Context:** The employee form shows the salary currency (read-only) for the chosen country, and offers every supported country, including ones with no employees yet. The country→currency map only existed in `app/currency.py`.
+**Decision:** `GET /api/meta/filters` also returns `currency_by_country`, built from `CURRENCY_BY_COUNTRY`. The form's Country dropdown uses its keys. The filter dropdowns keep using `countries`, which lists only countries that have employees.
+**Why:** One source of truth (D-003). Adding a country means changing `app/currency.py` and the `Country` Literal, and an integration test fails if those two drift apart.
+**Rejected:**
+- *Copy the map into the frontend:* two lists to keep in sync, and they would drift silently.
+- *Fill the form's Country dropdown from `countries`:* on an empty database, or for a new country, the first employee could never be added.
+- *A separate `/api/meta/currencies` endpoint:* a second request for eight entries the form loads alongside the filters anyway.

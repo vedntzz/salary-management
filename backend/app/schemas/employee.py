@@ -99,3 +99,5 @@ class FilterOptions(BaseModel):
     countries: list[str]
     departments: list[str]
     job_titles: list[str]
+    # All supported countries, not only those with employees, so the form can add the first (D-017).
+    currency_by_country: dict[str, str]
