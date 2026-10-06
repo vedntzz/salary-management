@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import employees, meta
+from app.api import employees, insights, meta
 from app.config import settings
 from app.services.employee_service import DuplicateEmailError, EmployeeNotFoundError
 
@@ -21,6 +21,7 @@ app.add_middleware(
 )
 app.include_router(employees.router)
 app.include_router(meta.router)
+app.include_router(insights.router)
 
 
 def handle_domain_error(request: Request, error: Exception) -> JSONResponse:

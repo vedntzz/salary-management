@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import ColumnElement, Select, UnaryExpression, func, or_, select
+from sqlalchemy import ColumnElement, Row, Select, UnaryExpression, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.currency import build_usd_equivalent_expression
@@ -11,6 +11,11 @@ SORT_COLUMNS: dict[str, tuple[ColumnElement, ...]] = {
     "name": (Employee.last_name, Employee.first_name),
     "salary": (build_usd_equivalent_expression(Employee.salary_amount, Employee.salary_currency),),
     "hire_date": (Employee.hire_date,),
+}
+GROUPABLE_COLUMNS: dict[str, ColumnElement[str]] = {
+    "country": Employee.country,
+    "department": Employee.department,
+    "job_title": Employee.job_title,
 }
 SEARCHABLE_COLUMNS = (
     Employee.first_name,
@@ -86,3 +91,32 @@ class EmployeeRepository:
     def delete(self, employee: Employee) -> None:
         self.session.delete(employee)
         self.session.commit()
+
+    def list_salaries_by_group(self, dimension: str) -> list[tuple[str, str, int]]:
+        column = GROUPABLE_COLUMNS[dimension]
+        statement = select(column, Employee.salary_currency, Employee.salary_amount)
+        return [tuple(row) for row in self.session.execute(statement)]
+
+    def list_salaries(self, country: str | None = None) -> list[tuple[str, int]]:
+        statement = select(Employee.salary_currency, Employee.salary_amount)
+        if country is not None:
+            statement = statement.where(Employee.country == country)
+        return [tuple(row) for row in self.session.execute(statement)]
+
+    def count_employees_by_country(self) -> dict[str, int]:
+        statement = select(Employee.country, func.count()).group_by(Employee.country)
+        return {country: count for country, count in self.session.execute(statement)}
+
+    def list_salary_records(self) -> list[Row[Any]]:
+        # Plain rows, not ORM objects, keep a 10k-row scan cheap.
+        statement = select(
+            Employee.id,
+            Employee.employee_code,
+            Employee.first_name,
+            Employee.last_name,
+            Employee.job_title,
+            Employee.country,
+            Employee.salary_amount,
+            Employee.salary_currency,
+        )
+        return list(self.session.execute(statement))

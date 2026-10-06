@@ -76,7 +76,7 @@ GET    /api/employees/{id}
 PATCH  /api/employees/{id}
 DELETE /api/employees/{id}
 GET    /api/meta/filters                       distinct countries, departments, titles
-GET    /api/insights/summary?currency=local|usd
+GET    /api/insights/summary                   always USD
 GET    /api/insights/by-dimension?dimension=country|department|job_title&currency=usd
 GET    /api/insights/distribution?country&bins=20
 GET    /api/insights/outliers?threshold=0.25&min_group_size=5

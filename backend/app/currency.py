@@ -35,6 +35,13 @@ def convert_usd_to_local(amount_usd: int, currency: str) -> int:
     return int(amount_local.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
+def convert_local_to_usd(amount: int, currency: str) -> int:
+    if currency not in LOCAL_UNITS_PER_USD:
+        raise ValueError(f"Unsupported currency: {currency}")
+    amount_usd = Decimal(amount) / LOCAL_UNITS_PER_USD[currency]
+    return int(amount_usd.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
 def build_usd_equivalent_expression(
     amount: ColumnElement[int], currency: ColumnElement[str]
 ) -> ColumnElement[float]:

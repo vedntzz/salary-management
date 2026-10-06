@@ -48,3 +48,11 @@ Every ticket was recorded with The Session (`@vedantzz/session`), a CLI I built 
 | `GET /api/insights/by-dimension` | 10,000 | | |
 | `GET /api/insights/outliers` | 10,000 | | |
 | Seed script | 10,000 | | |
+
+### Local performance · Oct 5 (10,000 rows, SQLite, M-series Mac)
+| Endpoint | Time |
+| --- | --- |
+| `GET /api/insights/outliers` (16 flagged) | 84 ms |
+| `GET /api/insights/by-dimension?dimension=job_title` | 20 ms |
+| `GET /api/employees?search=smith` | 9 ms |
+| Seed 10,000 rows | 0.24 s |

@@ -41,11 +41,13 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 - *SQLite in production:* data loss on every deploy or restart.
 - *Postgres in tests:* slower and needs Docker. Integration tests cover the SQL I write by hand.
 
-## D-006 · Median computed in Python, other aggregates in SQL
-**Context:** SQLite has no `percentile_cont`, and Postgres does.
-**Decision:** SQL handles count, min, max, and avg with `GROUP BY`. The median is computed in `statistics.py` from the grouped salaries.
-**Why:** Identical behavior on both databases, and 10k integers sort in about 1 ms.
-**Rejected:** *Database-specific median SQL*, because it would split the code paths and let tests pass on SQLite while production breaks.
+## D-006 · Salary aggregates computed in Python, not SQL
+**Context:** SQLite has no `percentile_cont`, and Postgres does. D-016 requires converting each salary to USD before aggregating.
+**Decision:** Each insight request loads the matching `(group, currency, salary)` rows in one query. The insights service computes count, min, and max from those integers, and `statistics.py` the avg and median, after conversion when reporting in USD.
+**Why:** Convert-then-aggregate can't be done in SQL without float division (D-004). Identical behavior on both databases, and 10k integers sort and sum in about 1 ms.
+**Rejected:**
+- *Database-specific median SQL:* it would split the code paths and let tests pass on SQLite while production breaks.
+- *SQL `GROUP BY` for count/min/max alongside the salary list:* a second code path that computes the same numbers the list already gives.
 
 ## D-007 · Server-side search, filter, sort, pagination
 **Decision:** `GET /api/employees?search&country&department&job_title&sort&page&page_size`, with page_size capped at 100. Indexes on `country`, `department`, `job_title`, and `email`.
@@ -58,6 +60,12 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 **Rejected:**
 - *Z-score:* salaries are skewed, and HR can't reason about "2.1 standard deviations."
 - *Org-wide percentile:* a US engineer would always look high next to an India analyst.
+
+**Details:**
+- *Strict `>`:* an employee exactly at the threshold is not flagged ("more than 25%"). The deviation and the threshold are both `Decimal`, so 25% can't round to 25.0000001 and flip.
+- *`deviation_percent`* is a signed float to one decimal (`30.0`, `-50.0`). It's a ratio, not money, so D-004 doesn't apply. `direction` (`above|below`) repeats the sign for readability.
+- *Order:* by absolute deviation descending (the exact value, not the rounded one), ties broken by employee id so the list is stable.
+- *Medians are in local currency.* Groups are single-country, so no conversion is needed.
 
 ## D-009 · Deterministic seed
 **Decision:** `seed.py` uses `random.Random(42)`, name lists from files, and salary bands per title × country multiplier. Bulk insert, idempotent (wipes and reseeds).
@@ -89,3 +97,11 @@ Every decision lists the context, the choice, why, and what was **rejected** and
 - **Employee codes come from the highest existing code.** Concurrent creates could race. Single HR user, and the unique constraint is the backstop.
 - **Emails are compared in lowercase but stored as typed.** Next: normalize on write.
 - **Search doesn't escape `%` or `_`.** Low impact, known.
+
+## D-016 · Summary is USD-only; USD stats convert each salary, then aggregate
+**Context:** The summary totals payroll across every country, and by-dimension groups can mix currencies.
+**Decision:** `GET /api/insights/summary` takes no currency parameter. Its total and median payroll are always in USD, and every insights response labels money with an ISO code (`"USD"`, `"INR"`). Wherever a stat is reported in USD, each salary is converted to whole USD first (D-003, half-up) and the count, min, max, avg, and median are taken over those integers.
+**Why:** A total across currencies only means something in one currency. Converting per salary keeps group stats consistent with the per-employee USD values the HR manager sees elsewhere.
+**Rejected:**
+- *`currency=local` with `null` totals:* a UI trap, since the cards would render blanks or zeros for a valid request.
+- *Converting the aggregated totals:* rounding differs from the per-row values, so a total wouldn't equal the sum of the figures shown beside it.
