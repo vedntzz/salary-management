@@ -6,7 +6,7 @@ import { EmployeeFilters } from './EmployeeFilters'
 import { EmployeeLoadError, ServerWakingNotice } from './EmployeeLoadNotices'
 import { EmployeePagination } from './EmployeePagination'
 import { EmployeeTable } from './EmployeeTable'
-import { useDelayedFlag, useEmployeeListParams, useEmployees } from './hooks'
+import { useDelayedFlag, useEmployeeListParams, useEmployees, useReturnFocus } from './hooks'
 
 // Render's free tier sleeps; a first load slower than this is almost always a cold start.
 const COLD_START_NOTICE_MS = 3000
@@ -35,19 +35,33 @@ function EmployeeResults({ params, onSortChange, onPageChange, onRowOpen }: Empl
   )
 }
 
+function useEmployeeDrawer() {
+  const [target, setTarget] = useState<EmployeeDrawerTarget | null>(null)
+  const focusReturn = useReturnFocus()
+  return {
+    target,
+    open: (next: EmployeeDrawerTarget) => {
+      focusReturn.remember()
+      setTarget(next)
+    },
+    close: () => setTarget(null),
+    restoreFocus: focusReturn.restore,
+  }
+}
+
 export function EmployeesPage() {
   const { params, setSearch, setFilter, setSort, setPage } = useEmployeeListParams()
-  const [drawer, setDrawer] = useState<EmployeeDrawerTarget | null>(null)
+  const drawer = useEmployeeDrawer()
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">Employees</h1>
-        <Button onClick={() => setDrawer({ mode: 'create' })}>Add employee</Button>
+        <Button onClick={() => drawer.open({ mode: 'create' })}>Add employee</Button>
       </div>
       <EmployeeFilters params={params} onSearchChange={setSearch} onFilterChange={setFilter} />
       <EmployeeResults params={params} onSortChange={setSort} onPageChange={setPage}
-        onRowOpen={(employee) => setDrawer({ mode: 'edit', employee })} />
-      <EmployeeDrawer target={drawer} onClose={() => setDrawer(null)} />
+        onRowOpen={(employee) => drawer.open({ mode: 'edit', employee })} />
+      <EmployeeDrawer target={drawer.target} onClose={drawer.close} onCloseAutoFocus={drawer.restoreFocus} />
     </section>
   )
 }

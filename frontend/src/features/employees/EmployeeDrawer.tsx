@@ -8,13 +8,14 @@ export type EmployeeDrawerTarget = { mode: 'create' } | { mode: 'edit'; employee
 interface EmployeeDrawerProps {
   target: EmployeeDrawerTarget | null
   onClose: () => void
+  onCloseAutoFocus: (event: Event) => void
 }
 
-export function EmployeeDrawer({ target, onClose }: EmployeeDrawerProps) {
+export function EmployeeDrawer({ target, onClose, onCloseAutoFocus }: EmployeeDrawerProps) {
   const employee = target?.mode === 'edit' ? target.employee : null
   return (
     <Sheet open={target !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="gap-0 sm:max-w-md">
+      <SheetContent className="gap-0 sm:max-w-md" onCloseAutoFocus={onCloseAutoFocus}>
         <SheetHeader className="border-b">
           <SheetTitle>{employee ? 'Edit employee' : 'Add employee'}</SheetTitle>
           <SheetDescription>

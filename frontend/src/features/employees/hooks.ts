@@ -150,3 +150,16 @@ export function useDeleteEmployee() {
     onSuccess: () => refreshEmployeeQueries(queryClient),
   })
 }
+
+export function useReturnFocus() {
+  const opener = useRef<HTMLElement | null>(null)
+  const remember = useCallback(() => {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  }, [])
+  const restore = useCallback((event: Event) => {
+    // The drawer opens from state, not a Radix trigger, so Radix has nowhere to send focus back.
+    event.preventDefault()
+    opener.current?.focus()
+  }, [])
+  return { remember, restore }
+}
