@@ -6,9 +6,10 @@ import {
   type Header,
   type Row,
 } from '@tanstack/react-table'
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Employee, EmployeeSort, SortKey } from '@/api/employees'
-import { formatSalary } from '@/lib/format'
+import { formatMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const features = tableFeatures({})
@@ -35,9 +36,21 @@ const columns = helper.columns([
   helper.accessor('salary_amount', {
     id: 'salary',
     header: 'Salary',
-    cell: (info) => formatSalary(info.getValue(), info.row.original.salary_currency),
+    cell: (info) => <SalaryCell employee={info.row.original} />,
   }),
 ])
+
+function SalaryCell({ employee }: { employee: Employee }) {
+  const paidInUsd = employee.salary_currency === 'USD'
+  return (
+    <>
+      <div>{formatMoney(employee.salary_amount, employee.salary_currency)}</div>
+      {!paidInUsd && (
+        <div className="text-xs text-muted-foreground">{`≈ ${formatMoney(employee.salary_usd_equivalent, 'USD')}`}</div>
+      )}
+    </>
+  )
+}
 
 type CurrentSort = EmployeeSort | ''
 
@@ -47,7 +60,16 @@ function sortDirection(current: CurrentSort, key: SortKey): 'ascending' | 'desce
   return 'none'
 }
 
-const SORT_INDICATOR = { ascending: '↑', descending: '↓', none: '' }
+const SORT_ICON = { ascending: ArrowUp, descending: ArrowDown, none: ArrowUpDown }
+
+function SortIndicator({ direction }: { direction: keyof typeof SORT_ICON }) {
+  const Icon = SORT_ICON[direction]
+  // Always shown so the column reads as sortable; the accent marks the active direction.
+  return (
+    <Icon aria-hidden="true" data-testid="sort-indicator" data-direction={direction}
+      className={cn('size-3.5', direction === 'none' ? 'text-muted-foreground/60' : 'text-primary')} />
+  )
+}
 
 interface SortProps {
   sort: CurrentSort
@@ -55,7 +77,6 @@ interface SortProps {
 }
 
 function SortButton({ label, sortKey, sort, onSortChange }: SortProps & { label: string; sortKey: SortKey }) {
-  const indicator = SORT_INDICATOR[sortDirection(sort, sortKey)]
   return (
     <button
       type="button"
@@ -63,7 +84,7 @@ function SortButton({ label, sortKey, sort, onSortChange }: SortProps & { label:
       className="inline-flex items-center gap-1 hover:text-foreground"
     >
       {label}
-      {indicator && <span aria-hidden="true" className="text-primary">{indicator}</span>}
+      <SortIndicator direction={sortDirection(sort, sortKey)} />
     </button>
   )
 }

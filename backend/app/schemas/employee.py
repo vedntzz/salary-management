@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 
-from app.currency import CURRENCY_BY_COUNTRY
+from app.currency import CURRENCY_BY_COUNTRY, convert_local_to_usd
 
 Country = Literal[
     "United States",
@@ -70,6 +70,12 @@ class EmployeeRead(EmployeeFields):
     salary_currency: str
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def salary_usd_equivalent(self) -> int:
+        # Converted here so the UI never needs its own rate table (D-003).
+        return convert_local_to_usd(self.salary_amount, self.salary_currency)
 
 
 class EmployeeQuery(BaseModel):

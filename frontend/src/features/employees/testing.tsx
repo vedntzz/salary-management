@@ -27,14 +27,17 @@ export const EMPLOYEES = [
   buildEmployee(1, {
     first_name: 'Asha', last_name: 'Rao', job_title: 'Senior Engineer',
     department: 'Engineering', country: 'India', salary_amount: 2450000, salary_currency: 'INR',
+    salary_usd_equivalent: 27841,
   }),
   buildEmployee(2, {
     first_name: 'John', last_name: 'Smith', job_title: 'Analyst',
     department: 'Finance', country: 'United States', salary_amount: 185000, salary_currency: 'USD',
+    salary_usd_equivalent: 185000,
   }),
   buildEmployee(3, {
     first_name: 'Lena', last_name: 'Vogel', job_title: 'Engineer',
     department: 'Engineering', country: 'Germany', salary_amount: 72000, salary_currency: 'EUR',
+    salary_usd_equivalent: 83721,
   }),
 ]
 
@@ -49,6 +52,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 export const CREATED_EMPLOYEE = buildEmployee(4, {
   first_name: 'Maya', last_name: 'Iyer', job_title: 'Analyst',
   department: 'Finance', country: 'India', salary_amount: 1800000, salary_currency: 'INR',
+  salary_usd_equivalent: 20455,
 })
 
 type MockResponse = { status: number; body?: unknown }

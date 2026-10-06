@@ -11,6 +11,8 @@ export interface Employee {
   country: string
   salary_amount: number
   salary_currency: string
+  // Whole USD at the fixed rate, converted by the API (D-003).
+  salary_usd_equivalent: number
   hire_date: string
   created_at: string
   updated_at: string
