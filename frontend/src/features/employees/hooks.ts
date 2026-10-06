@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import {
+  createEmployee,
+  deleteEmployee,
   fetchEmployees,
   fetchFilterOptions,
+  updateEmployee,
+  type EmployeeFields,
   type EmployeeListParams,
   type EmployeeSort,
 } from '@/api/employees'
@@ -120,4 +124,29 @@ export function useTextFollowingUrl(urlValue: string): [string, (text: string) =
     setText(urlValue)
   }
   return [text, setText]
+}
+
+function refreshEmployeeQueries(queryClient: QueryClient): Promise<unknown> {
+  // A save can add a new title or department, so the filter options go stale too.
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['employees'] }),
+    queryClient.invalidateQueries({ queryKey: ['filter-options'] }),
+  ])
+}
+
+export function useSaveEmployee(employeeId: number | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (fields: EmployeeFields) =>
+      employeeId === null ? createEmployee(fields) : updateEmployee(employeeId, fields),
+    onSuccess: () => refreshEmployeeQueries(queryClient),
+  })
+}
+
+export function useDeleteEmployee() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: deleteEmployee,
+    onSuccess: () => refreshEmployeeQueries(queryClient),
+  })
 }

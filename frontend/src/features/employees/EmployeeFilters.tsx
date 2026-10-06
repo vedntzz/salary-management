@@ -1,4 +1,4 @@
-import type { EmployeeListParams, FilterOptions } from '@/api/employees'
+import type { EmployeeListParams } from '@/api/employees'
 import { useDebouncedCallback, useFilterOptions, useTextFollowingUrl, type EmployeeFilterKey } from './hooks'
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -6,7 +6,7 @@ const SEARCH_DEBOUNCE_MS = 300
 const CONTROL_CLASS =
   'h-8 rounded-sm border border-input bg-card px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
 
-const FILTERS: { key: EmployeeFilterKey; label: string; optionsKey: keyof FilterOptions }[] = [
+const FILTERS: { key: EmployeeFilterKey; label: string; optionsKey: 'countries' | 'departments' | 'job_titles' }[] = [
   { key: 'country', label: 'Country', optionsKey: 'countries' },
   { key: 'department', label: 'Department', optionsKey: 'departments' },
   { key: 'job_title', label: 'Title', optionsKey: 'job_titles' },

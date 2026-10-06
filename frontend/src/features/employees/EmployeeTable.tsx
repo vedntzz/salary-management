@@ -79,17 +79,20 @@ function HeaderCell({ header, sort, onSortChange }: SortProps & { header: Employ
   )
 }
 
-function EmployeeTableRow({ row }: { row: EmployeeRow }) {
+function bodyCellClassName(columnId: string): string {
+  return cn('px-3 py-1.5 whitespace-nowrap', NUMERIC_COLUMNS.has(columnId) && 'text-right tabular-nums')
+}
+
+function EmployeeTableRow({ row, onOpen }: { row: EmployeeRow; onOpen: (employee: Employee) => void }) {
   return (
-    <tr className="border-b last:border-b-0 hover:bg-accent">
+    <tr
+      tabIndex={0}
+      onClick={() => onOpen(row.original)}
+      onKeyDown={(event) => event.key === 'Enter' && onOpen(row.original)}
+      className="cursor-pointer border-b last:border-b-0 hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+    >
       {row.getAllCells().map((cell) => (
-        <td
-          key={cell.id}
-          className={cn(
-            'px-3 py-1.5 whitespace-nowrap',
-            NUMERIC_COLUMNS.has(cell.column.id) && 'text-right tabular-nums',
-          )}
-        >
+        <td key={cell.id} className={bodyCellClassName(cell.column.id)}>
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </td>
       ))}
@@ -109,9 +112,10 @@ interface EmployeeTableProps extends SortProps {
   employees: Employee[] | undefined
   isLoading: boolean
   isRefreshing: boolean
+  onRowOpen: (employee: Employee) => void
 }
 
-export function EmployeeTable({ employees, isLoading, isRefreshing, ...sortProps }: EmployeeTableProps) {
+export function EmployeeTable({ employees, isLoading, isRefreshing, onRowOpen, ...sortProps }: EmployeeTableProps) {
   const table = useTable({ features, columns, data: employees ?? EMPTY_ROWS })
   const rows = table.getRowModel().rows
   return (
@@ -123,7 +127,7 @@ export function EmployeeTable({ employees, isLoading, isRefreshing, ...sortProps
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => <EmployeeTableRow key={row.id} row={row} />)}
+          {rows.map((row) => <EmployeeTableRow key={row.id} row={row} onOpen={onRowOpen} />)}
         </tbody>
       </table>
       {isLoading && <TableMessage>Loading employees…</TableMessage>}
