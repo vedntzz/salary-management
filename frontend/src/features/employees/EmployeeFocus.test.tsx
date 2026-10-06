@@ -1,8 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { openAddEmployeeForm, openEditEmployeeForm } from './formTesting'
-import { mockEmployeesApi, renderEmployeesAt } from './testing'
+import { openAddEmployeeForm, openEditEmployeeForm, saveForm } from './formTesting'
+import { EMPLOYEES, employeePage, mockEmployeesApi, renderEmployeesAt } from './testing'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -41,5 +41,22 @@ describe('Employee dialogs: focus', () => {
     // Assert
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
     await waitFor(() => expect(deleteButton).toHaveFocus())
+  })
+
+  it('test_saving_edit_returns_focus_to_same_employee_after_list_reorders', async () => {
+    // Arrange
+    const user = userEvent.setup()
+    mockEmployeesApi()
+    renderEmployeesAt('/employees')
+    const dialog = await openEditEmployeeForm(user, /EMP-00001/)
+    // After the save the list comes back in a new order, with Asha last instead of first.
+    mockEmployeesApi({ page: employeePage({ items: [EMPLOYEES[1], EMPLOYEES[2], EMPLOYEES[0]] }) })
+
+    // Act
+    await saveForm(user, dialog)
+
+    // Assert
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('row', { name: /EMP-00001/ })).toHaveFocus())
   })
 })
